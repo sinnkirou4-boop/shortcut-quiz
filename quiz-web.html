@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ショートカットクイズ</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    background: #1a1a2e;
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #e0e0ff;
+  }
+
+  .score-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #aaa;
+  }
+  .score-bar .score { font-size: 16px; font-weight: 700; color: #7eb8f7; }
+
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #7eb8f7;
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  .question-card {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 28px 24px;
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .question-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .question-keys {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    color: #7eb8f7;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .question-app {
+    font-size: 12px;
+    color: #666;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .choice-btn {
+    background: #16213e;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 16px 10px;
+    color: #ddd;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .choice-btn:active:not(:disabled) {
+    background: #0f3460;
+    border-color: #7eb8f7;
+  }
+  .choice-btn.correct {
+    background: #1a5c38;
+    border-color: #4caf82;
+    color: #fff;
+  }
+  .choice-btn.wrong {
+    background: #5c1a1a;
+    border-color: #cf6679;
+    color: #fff;
+  }
+  .choice-btn:disabled { cursor: default; }
+
+  .feedback {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    height: 26px;
+    margin-bottom: 16px;
+  }
+  .feedback.ok { color: #4caf82; }
+  .feedback.ng { color: #cf6679; }
+
+  .next-btn {
+    width: 100%;
+    padding: 16px;
+    background: #7eb8f7;
+    border: none;
+    border-radius: 10px;
+    color: #111;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .result {
+    display: none;
+    text-align: center;
+  }
+  .result-emoji { font-size: 64px; margin-bottom: 16px; }
+  .result-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .result-score { font-size: 52px; font-weight: 700; color: #7eb8f7; margin-bottom: 8px; }
+  .result-sub { font-size: 15px; color: #888; margin-bottom: 28px; }
+  .retry-btn {
+    padding: 16px 48px;
+    background: #7eb8f7;
+    border: none;
+    border-radius: 10px;
+    color: #111;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div id="quizArea">
+    <div class="title">⌨️ ショートカットクイズ</div>
+    <div class="score-bar">
+      <span id="questionNum">1 / 10問</span>
+      <span class="score" id="scoreDisplay">0点</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width:0%"></div>
+    </div>
+    <div class="question-card">
+      <div class="question-label">このショートカットは何をする？</div>
+      <div class="question-keys" id="questionKeys">⌘S</div>
+      <div class="question-app" id="questionApp">システム共通</div>
+    </div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <button class="next-btn" id="nextBtn">次の問題 →</button>
+  </div>
+
+  <div class="result" id="resultArea">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-title">クイズ終了！</div>
+    <div class="result-score" id="resultScore">8 / 10</div>
+    <div class="result-sub" id="resultSub">よくできました！</div>
+    <button class="retry-btn" id="retryBtn">もう一度チャレンジ</button>
+  </div>
+</div>
+
+<script>
+const shortcuts = {
+  common: [
+    { keys: '⌘C',     desc: 'コピー',                   appLabel: 'システム共通' },
+    { keys: '⌘V',     desc: 'ペースト',                 appLabel: 'システム共通' },
+    { keys: '⌘X',     desc: 'カット',                   appLabel: 'システム共通' },
+    { keys: '⌘Z',     desc: '元に戻す',                 appLabel: 'システム共通' },
+    { keys: '⌘A',     desc: 'すべてを選択',             appLabel: 'システム共通' },
+    { keys: '⌘F',     desc: '検索',                     appLabel: 'システム共通' },
+    { keys: '⌘S',     desc: '保存',                     appLabel: 'システム共通' },
+    { keys: '⌘N',     desc: '新規',                     appLabel: 'システム共通' },
+    { keys: '⌘W',     desc: 'ウィンドウを閉じる',       appLabel: 'システム共通' },
+    { keys: '⌘Q',     desc: '終了',                     appLabel: 'システム共通' },
+    { keys: '⌘Tab',   desc: 'アプリ切り替え',           appLabel: 'システム共通' },
+    { keys: '⌘Space', desc: 'Spotlight',                appLabel: 'システム共通' },
+    { keys: '⌘⇧3',   desc: 'スクリーンショット（全画面）', appLabel: 'システム共通' },
+    { keys: '⌘⇧4',   desc: 'スクリーンショット（選択）',   appLabel: 'システム共通' },
+  ],
+  finder: [
+    { keys: '⌘⇧N',  desc: '新しいフォルダ',           appLabel: 'Finder' },
+    { keys: '⌘⌫',   desc: 'ゴミ箱に入れる',           appLabel: 'Finder' },
+    { keys: '⌘D',   desc: '複製',                     appLabel: 'Finder' },
+    { keys: '⌘I',   desc: '情報を見る',               appLabel: 'Finder' },
+    { keys: 'Space',desc: 'クイックルック',            appLabel: 'Finder' },
+    { keys: '⌘1',   desc: 'アイコン表示',             appLabel: 'Finder' },
+    { keys: '⌘2',   desc: 'リスト表示',               appLabel: 'Finder' },
+    { keys: '⌘↑',   desc: '上位フォルダを開く',       appLabel: 'Finder' },
+    { keys: '⌘⇧H',  desc: 'ホームフォルダ',           appLabel: 'Finder' },
+  ],
+  chrome: [
+    { keys: '⌘T',   desc: '新しいタブ',               appLabel: 'Chrome' },
+    { keys: '⌘W',   desc: 'タブを閉じる',             appLabel: 'Chrome' },
+    { keys: '⌘⇧T',  desc: '閉じたタブを開く',         appLabel: 'Chrome' },
+    { keys: '⌘R',   desc: '再読み込み',               appLabel: 'Chrome' },
+    { keys: '⌘L',   desc: 'アドレスバー',             appLabel: 'Chrome' },
+    { keys: '⌘⇧N',  desc: 'シークレットウィンドウ',   appLabel: 'Chrome' },
+    { keys: '⌘+',   desc: '拡大',                     appLabel: 'Chrome' },
+    { keys: '⌘-',   desc: '縮小',                     appLabel: 'Chrome' },
+  ],
+  vscode: [
+    { keys: '⌘P',   desc: 'クイックオープン',         appLabel: 'VS Code' },
+    { keys: '⌘⇧P',  desc: 'コマンドパレット',         appLabel: 'VS Code' },
+    { keys: '⌘B',   desc: 'サイドバー切り替え',       appLabel: 'VS Code' },
+    { keys: '⌘/',   desc: 'コメント切り替え',         appLabel: 'VS Code' },
+    { keys: '⌘D',   desc: '次の選択に追加',           appLabel: 'VS Code' },
+    { keys: '⌘⇧K',  desc: '行を削除',                 appLabel: 'VS Code' },
+  ],
+};
+
+const allShortcuts = Object.values(shortcuts).flat();
+const TOTAL = 10;
+let questions = [], current = 0, score = 0, answered = false;
+
+function generateQuestions() {
+  const shuffled = [...allShortcuts].sort(() => Math.random() - 0.5).slice(0, TOTAL);
+  return shuffled.map(correct => {
+    const others = allShortcuts.filter(s => s.desc !== correct.desc)
+      .sort(() => Math.random() - 0.5).slice(0, 3);
+    const choices = [...others, correct].sort(() => Math.random() - 0.5);
+    return { correct, choices };
+  });
+}
+
+function showQuestion() {
+  const q = questions[current];
+  answered = false;
+  document.getElementById('questionNum').textContent = `${current + 1} / ${TOTAL}問`;
+  document.getElementById('scoreDisplay').textContent = `${score}点`;
+  document.getElementById('progressFill').style.width = `${(current / TOTAL) * 100}%`;
+  document.getElementById('questionKeys').textContent = q.correct.keys;
+  document.getElementById('questionApp').textContent = q.correct.appLabel;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextBtn').style.display = 'none';
+
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  q.choices.forEach(choice => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = choice.desc;
+    btn.addEventListener('click', () => selectAnswer(btn, choice, q.correct));
+    choicesEl.appendChild(btn);
+  });
+}
+
+function selectAnswer(btn, selected, correct) {
+  if (answered) return;
+  answered = true;
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+  if (selected.desc === correct.desc) {
+    btn.classList.add('correct');
+    score++;
+    document.getElementById('feedback').textContent = '✅ 正解！';
+    document.getElementById('feedback').className = 'feedback ok';
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.choice-btn').forEach(b => {
+      if (b.textContent === correct.desc) b.classList.add('correct');
+    });
+    document.getElementById('feedback').textContent = `❌ 正解は「${correct.desc}」`;
+    document.getElementById('feedback').className = 'feedback ng';
+  }
+  document.getElementById('scoreDisplay').textContent = `${score}点`;
+  document.getElementById('nextBtn').style.display = 'block';
+}
+
+function showResult() {
+  document.getElementById('quizArea').style.display = 'none';
+  document.getElementById('resultArea').style.display = 'block';
+  const pct = score / TOTAL;
+  let emoji, msg;
+  if (pct === 1)       { emoji = '🏆'; msg = '満点！完璧です！'; }
+  else if (pct >= 0.8) { emoji = '🎉'; msg = 'よくできました！'; }
+  else if (pct >= 0.6) { emoji = '👍'; msg = 'まあまあです！'; }
+  else if (pct >= 0.4) { emoji = '📚'; msg = 'もう少し練習しましょう'; }
+  else                 { emoji = '💪'; msg = '練習あるのみ！'; }
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultScore').textContent = `${score} / ${TOTAL}`;
+  document.getElementById('resultSub').textContent = msg;
+}
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  current++;
+  if (current >= TOTAL) showResult();
+  else showQuestion();
+});
+
+document.getElementById('retryBtn').addEventListener('click', () => {
+  document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('quizArea').style.display = 'block';
+  current = 0; score = 0;
+  questions = generateQuestions();
+  showQuestion();
+});
+
+questions = generateQuestions();
+showQuestion();
+</script>
+</body>
+</html>
