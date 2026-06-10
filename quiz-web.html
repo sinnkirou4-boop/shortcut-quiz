@@ -161,12 +161,133 @@
     font-weight: 700;
     cursor: pointer;
   }
+  .back-btn {
+    margin-top: 14px;
+    padding: 12px 40px;
+    background: none;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: #aaa;
+    font-size: 15px;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+  }
+  .back-btn:active { background: rgba(255,255,255,0.05); }
+
+  /* トップ画面 */
+  .top-screen {
+    text-align: center;
+  }
+  .top-icon { font-size: 64px; margin-bottom: 16px; }
+  .top-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; color: #e0e0ff; }
+  .top-sub { font-size: 14px; color: #888; margin-bottom: 36px; }
+  .top-btn {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 12px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 12px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .top-btn-primary { background: #7eb8f7; color: #111; }
+  .top-btn-secondary {
+    background: #16213e;
+    color: #ddd;
+    border: 1.5px solid rgba(255,255,255,0.12);
+  }
+
+  /* ショートカット一覧画面 */
+  .list-screen { display: none; }
+  .list-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .list-back-btn {
+    background: none;
+    border: none;
+    color: #7eb8f7;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+  .list-title { font-size: 18px; font-weight: 700; }
+  .app-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .app-tab {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: none;
+    color: #aaa;
+    font-size: 13px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .app-tab.active {
+    background: #7eb8f7;
+    border-color: #7eb8f7;
+    color: #111;
+    font-weight: 700;
+  }
+  .shortcut-list {
+    background: #16213e;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .shortcut-row:last-child { border-bottom: none; }
+  .shortcut-key {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    background: rgba(126,184,247,0.15);
+    border: 1px solid rgba(126,184,247,0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    min-width: 70px;
+    text-align: center;
+    color: #7eb8f7;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .shortcut-desc {
+    font-size: 14px;
+    color: #ddd;
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <div id="quizArea">
+
+  <!-- トップ画面 -->
+  <div id="topScreen" class="top-screen">
+    <div class="top-icon">⌨️</div>
+    <div class="top-title">ショートカット<br>マスター</div>
+    <div class="top-sub">Macのショートカットを覚えよう</div>
+    <button class="top-btn top-btn-primary" id="startQuizBtn">🎮 問題に進む</button>
+    <button class="top-btn top-btn-secondary" id="showListBtn">📋 ショートカット一覧</button>
+  </div>
+
+  <!-- クイズ画面 -->
+  <div id="quizArea" style="display:none;">
     <div class="title">⌨️ ショートカットクイズ</div>
     <div class="score-bar">
       <span id="questionNum">1 / 10問</span>
@@ -191,7 +312,19 @@
     <div class="result-score" id="resultScore">8 / 10</div>
     <div class="result-sub" id="resultSub">よくできました！</div>
     <button class="retry-btn" id="retryBtn">もう一度チャレンジ</button>
+    <button class="back-btn" id="resultBackBtn">トップに戻る</button>
   </div>
+
+  <!-- ショートカット一覧画面 -->
+  <div id="listScreen" class="list-screen">
+    <div class="list-header">
+      <button class="list-back-btn" id="listBackBtn">← 戻る</button>
+      <div class="list-title">ショートカット一覧</div>
+    </div>
+    <div class="app-tabs" id="appTabs"></div>
+    <div class="shortcut-list" id="shortcutList"></div>
+  </div>
+
 </div>
 
 <script>
@@ -323,16 +456,79 @@ document.getElementById('nextBtn').addEventListener('click', () => {
   else showQuestion();
 });
 
-document.getElementById('retryBtn').addEventListener('click', () => {
-  document.getElementById('resultArea').style.display = 'none';
-  document.getElementById('quizArea').style.display = 'block';
+// --- 画面切り替え ---
+function showScreen(id) {
+  ['topScreen','quizArea','resultArea','listScreen'].forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  document.getElementById(id).style.display = 'block';
+}
+
+// トップ → クイズ
+document.getElementById('startQuizBtn').addEventListener('click', () => {
   current = 0; score = 0;
   questions = generateQuestions();
+  showScreen('quizArea');
   showQuestion();
 });
 
-questions = generateQuestions();
-showQuestion();
+// トップ → 一覧
+document.getElementById('showListBtn').addEventListener('click', () => {
+  showScreen('listScreen');
+  renderList('common');
+});
+
+// 結果 → トップ
+document.getElementById('resultBackBtn').addEventListener('click', () => {
+  showScreen('topScreen');
+});
+
+// 一覧 → トップ
+document.getElementById('listBackBtn').addEventListener('click', () => {
+  showScreen('topScreen');
+});
+
+// リトライ
+document.getElementById('retryBtn').addEventListener('click', () => {
+  current = 0; score = 0;
+  questions = generateQuestions();
+  showScreen('quizArea');
+  showQuestion();
+});
+
+// --- ショートカット一覧 ---
+const appLabels = {
+  common: 'システム共通',
+  finder: 'Finder',
+  chrome: 'Chrome',
+  vscode: 'VS Code',
+};
+
+function renderList(appKey) {
+  // タブ
+  const tabsEl = document.getElementById('appTabs');
+  tabsEl.innerHTML = '';
+  Object.entries(appLabels).forEach(([key, label]) => {
+    const tab = document.createElement('button');
+    tab.className = 'app-tab' + (key === appKey ? ' active' : '');
+    tab.textContent = label;
+    tab.addEventListener('click', () => renderList(key));
+    tabsEl.appendChild(tab);
+  });
+
+  // 一覧
+  const listEl = document.getElementById('shortcutList');
+  listEl.innerHTML = '';
+  shortcuts[appKey].forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'shortcut-row';
+    row.innerHTML = `<span class="shortcut-key">${s.keys}</span><span class="shortcut-desc">${s.desc}</span>`;
+    listEl.appendChild(row);
+  });
+}
+
+// 初期表示はトップ画面
+showScreen('topScreen');
 </script>
 </body>
 </html>
